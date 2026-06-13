@@ -1,0 +1,62 @@
+# One-command local setup: `docker compose up --build`.
+# Frontend → http://localhost:3000, backend → http://localhost:8000.
+#
+# This is for local development / reviewer convenience. Production deploys
+# use Render via `render.yaml`; the two are independent.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tasks
+      POSTGRES_PASSWORD: tasks
+      POSTGRES_DB: tasks
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tasks -d tasks"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://tasks:tasks@db:5432/tasks
+      JWT_SECRET: docker-compose-dev-secret-please-change-32-chars
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRES_MINUTES: "1440"
+      COOKIE_NAME: tm_token
+      COOKIE_SECURE: "false"
+      COOKIE_SAMESITE: lax
+      CORS_ORIGINS: http://localhost:3000
+      ENVIRONMENT: development
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Inlined into the Next.js client bundle at build time. The browser
+        # talks to the backend at http://localhost:8000, not the docker
+        # network name, so this is the right value.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:

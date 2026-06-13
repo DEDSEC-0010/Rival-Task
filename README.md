@@ -12,6 +12,24 @@ Built for the Rival full-stack developer assessment. Python (FastAPI) backend + 
 | Database | PostgreSQL 16 (SQLite is used in tests only)            |
 | Auth     | JWT in httpOnly cookie + bcrypt password hashing        |
 
+## Quick start (Docker — one command)
+
+If you have Docker installed:
+
+```bash
+cp .env.example .env       # optional, defaults are fine
+docker compose up --build
+```
+
+Wait ~60 seconds for the first build. Then:
+- Frontend at http://localhost:3000
+- Backend at http://localhost:8000 (`/docs` for OpenAPI)
+- Postgres at localhost:5432 (user: `tasks`, pass: `tasks`, db: `tasks`)
+
+`docker compose down` stops everything. `docker compose down -v` also drops the database volume for a clean slate.
+
+The compose setup is independent of the Render deploy — both work, neither blocks the other.
+
 ## Quick start (local, without Docker)
 
 You will need: Python 3.12, Node 20+, and a PostgreSQL 14+ instance.
@@ -114,14 +132,14 @@ UPDATE users SET role = 'admin' WHERE email = 'you@example.com';
 - Optimistic UI for toggle-complete and delete, with rollback on failure
 - Dark mode toggle (system / light / dark) persisted via `next-themes`
 - GitHub Actions CI: runs pytest on the backend and lint + build on the frontend
+- Dockerized setup: `docker compose up --build` brings up Postgres + backend + frontend with migrations applied
 
 **Out of scope (by agreement)**
 
 - Real-time updates (WebSockets / SSE)
 - File attachments
 - Activity log
-- Docker / docker-compose
-- Live deployment (see Deployment below for how to ship)
+- Live deployment: deployed to Render (see Deployment section below)
 
 ## Project layout
 
