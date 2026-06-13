@@ -194,10 +194,22 @@ All three are required for the auth cookie to round-trip across origins.
 
 ### Granting admin in production
 
-```bash
-# From Render dashboard → tasks-db → "Connect"
-psql "<external-connection-string>" -c "UPDATE users SET role='admin' WHERE email='you@example.com';"
+Easiest: Render dashboard → `tasks-db` → **Connect** → **PSQL** tab → paste:
+
+```sql
+UPDATE users SET role='admin' WHERE email='you@example.com';
 ```
+
+No local install needed; runs in Render's browser terminal.
+
+If you prefer running locally without installing `psql`, the repo ships a tiny script that uses asyncpg (already a backend dependency):
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m scripts.promote_admin you@example.com "postgresql://tasks:...@..."
+```
+
+(Pass the External Database URL from the Render dashboard as the second arg, or set it as `DATABASE_URL` and run with one arg.)
 
 ### Free-tier caveats
 
