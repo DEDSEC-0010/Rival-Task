@@ -1,0 +1,69 @@
+# Render Blueprint
+# Provisions: managed Postgres + Python backend + Next.js frontend.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# After first deploy, set the two cross-service URL env vars in the dashboard
+# (marked `sync: false` below). See README for the exact steps.
+
+databases:
+  - name: tasks-db
+    databaseName: tasks
+    user: tasks
+    plan: free
+
+services:
+  # --- Backend (FastAPI) ---
+  - type: web
+    name: tasks-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    healthCheckPath: /health
+    buildCommand: pip install -r requirements.txt
+    # Migrations run on every start so a fresh DB is initialised on first deploy.
+    # Safe because Alembic is idempotent; on Render's paid plan, move this to
+    # preDeployCommand to keep it out of the boot path.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.5
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tasks-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRES_MINUTES
+        value: "1440"
+      - key: COOKIE_NAME
+        value: tm_token
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: none
+      - key: ENVIRONMENT
+        value: production
+      # Set this in the dashboard after the frontend service is created.
+      # Value should be the full https URL of the frontend, e.g.
+      #   https://tasks-frontend.onrender.com
+      - key: CORS_ORIGINS
+        sync: false
+
+  # --- Frontend (Next.js) ---
+  - type: web
+    name: tasks-frontend
+    runtime: node
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      # Set this in the dashboard after the backend service is created.
+      # Value should be the full https URL of the backend, e.g.
+      #   https://tasks-backend.onrender.com
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
