@@ -6,6 +6,7 @@ import { CaretLeft } from "@phosphor-icons/react";
 
 import { AppShell } from "@/components/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TaskActivityTimeline } from "@/components/task-activity";
 import { TaskForm } from "@/components/task-form";
 import { useTask } from "@/lib/queries";
 
@@ -43,7 +44,15 @@ export default function EditTaskPage() {
           {(error as { message?: string })?.message ?? "Could not load task"}
         </p>
       ) : data ? (
-        <TaskForm task={data} />
+        <>
+          <TaskForm task={data} />
+          <section className="mt-12 max-w-2xl">
+            <h2 className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
+              Activity
+            </h2>
+            <TaskActivityTimeline taskId={data.id} />
+          </section>
+        </>
       ) : null}
     </AppShell>
   );

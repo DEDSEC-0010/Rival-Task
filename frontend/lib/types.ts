@@ -34,3 +34,14 @@ export type AuthResponse = {
   user: User;
   token: string;
 };
+
+export type TaskAction = "created" | "updated" | "completed" | "reopened";
+
+export type TaskActivity = {
+  id: string;
+  task_id: string;
+  user_id: string;
+  action: TaskAction;
+  details: Record<string, unknown> | null;
+  created_at: string;
+};

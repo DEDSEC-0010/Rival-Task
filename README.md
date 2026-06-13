@@ -95,6 +95,7 @@ All routes are prefixed with `/api/v1`. Task routes require auth (cookie or `Aut
 | GET    | `/tasks/:id`          |                                                                                                    | 404 if not yours     |
 | PATCH  | `/tasks/:id`          | partial body                                                                                       | 404 if not yours     |
 | DELETE | `/tasks/:id`          |                                                                                                    | 204                  |
+| GET    | `/tasks/:id/activity` |                                                                                                    | timeline; owner-scoped |
 | GET    | `/admin/tasks`        | `?status=&page=&page_size=`                                                                        | admin role only      |
 
 Error responses share a single shape:
@@ -133,12 +134,12 @@ UPDATE users SET role = 'admin' WHERE email = 'you@example.com';
 - Dark mode toggle (system / light / dark) persisted via `next-themes`
 - GitHub Actions CI: runs pytest on the backend and lint + build on the frontend
 - Dockerized setup: `docker compose up --build` brings up Postgres + backend + frontend with migrations applied
+- Activity log: per-task timeline of create / update / complete / reopen events, with from→to diffs on changed fields. Visible at the bottom of the task edit page.
 
 **Out of scope (by agreement)**
 
 - Real-time updates (WebSockets / SSE)
 - File attachments
-- Activity log
 - Live deployment: deployed to Render (see Deployment section below)
 
 ## Project layout

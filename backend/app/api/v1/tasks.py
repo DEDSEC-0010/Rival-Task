@@ -1,5 +1,5 @@
 from math import ceil
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -9,11 +9,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user
 from app.core.errors import AppError
 from app.db.session import get_session
+from app.models.activity import TaskAction, TaskActivity
 from app.models.task import Task, TaskPriority, TaskStatus
 from app.models.user import User
+from app.schemas.activity import ActivityOut
 from app.schemas.task import Page, TaskCreate, TaskOut, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+
+def _serialise(value: Any) -> Any:
+    """Convert a value into something JSON-serialisable for the activity log."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    # Enums (TaskStatus / TaskPriority) and datetimes both render fine as strings.
+    return str(value)
+
+
+def _diff(before: Task, after: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Return a {field: {from, to}} diff for the fields touched by an update."""
+    out: dict[str, dict[str, Any]] = {}
+    for key, new_value in after.items():
+        old_value = getattr(before, key, None)
+        if old_value != new_value:
+            out[key] = {"from": _serialise(old_value), "to": _serialise(new_value)}
+    return out
 
 SortField = Literal["due_date", "priority", "created_at"]
 SortOrder = Literal["asc", "desc"]
@@ -41,6 +61,15 @@ async def create_task(
         due_date=payload.due_date,
     )
     session.add(task)
+    await session.flush()
+    session.add(
+        TaskActivity(
+            task_id=task.id,
+            user_id=user.id,
+            action=TaskAction.created,
+            details={"title": task.title, "priority": _serialise(task.priority)},
+        )
+    )
     await session.commit()
     await session.refresh(task)
     return TaskOut.model_validate(task)
@@ -131,8 +160,29 @@ async def update_task(
 ) -> TaskOut:
     task = await _get_owned_task(task_id, user, session)
     updates = payload.model_dump(exclude_unset=True)
+    diff = _diff(task, updates)
+    if not diff:
+        # No-op update; do not write an activity row for it.
+        return TaskOut.model_validate(task)
+
+    # Status transitions get their own action so the timeline reads naturally.
+    if "status" in diff:
+        new_status = updates["status"]
+        if new_status == TaskStatus.completed:
+            action = TaskAction.completed
+        elif task.status == TaskStatus.completed:
+            action = TaskAction.reopened
+        else:
+            action = TaskAction.updated
+    else:
+        action = TaskAction.updated
+
     for key, value in updates.items():
         setattr(task, key, value)
+
+    session.add(
+        TaskActivity(task_id=task.id, user_id=user.id, action=action, details={"changed": diff})
+    )
     await session.commit()
     await session.refresh(task)
     return TaskOut.model_validate(task)
@@ -147,3 +197,20 @@ async def delete_task(
     task = await _get_owned_task(task_id, user, session)
     await session.delete(task)
     await session.commit()
+
+
+@router.get("/{task_id}/activity", response_model=list[ActivityOut])
+async def list_task_activity(
+    task_id: UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> list[ActivityOut]:
+    # Reuse the ownership check so users cannot read other people's history.
+    await _get_owned_task(task_id, user, session)
+    result = await session.execute(
+        select(TaskActivity)
+        .where(TaskActivity.task_id == task_id)
+        .order_by(TaskActivity.created_at.desc())
+    )
+    rows = result.scalars().all()
+    return [ActivityOut.model_validate(r) for r in rows]

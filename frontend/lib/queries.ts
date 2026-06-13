@@ -10,6 +10,7 @@ import type {
   AuthResponse,
   Page,
   Task,
+  TaskActivity,
   TaskPriority,
   TaskStatus,
   User,
@@ -100,6 +101,14 @@ export function useTask(id: string | null) {
   });
 }
 
+export function useTaskActivity(id: string | null) {
+  return useQuery<TaskActivity[]>({
+    queryKey: ["task-activity", id],
+    queryFn: () => api.get<TaskActivity[]>(`/tasks/${id}/activity`),
+    enabled: !!id,
+  });
+}
+
 export type TaskInput = {
   title: string;
   description?: string | null;
@@ -123,6 +132,7 @@ export function useUpdateTask(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["task", id] });
+      qc.invalidateQueries({ queryKey: ["task-activity", id] });
     },
   });
 }
