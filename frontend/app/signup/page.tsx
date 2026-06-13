@@ -9,7 +9,7 @@ export default function SignupPage() {
   return (
     <AuthShell
       title="Create your account"
-      subtitle="Eight characters minimum. We hash with bcrypt, never store plaintext."
+      subtitle="One email, one password, and you're in. Eight characters minimum."
       footer={
         <span>
           Already have an account?{" "}
