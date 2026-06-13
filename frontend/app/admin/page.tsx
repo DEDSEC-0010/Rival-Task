@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -13,6 +14,7 @@ import { useAdminTasks, useUser } from "@/lib/queries";
 import type { TaskStatus } from "@/lib/types";
 
 export default function AdminPage() {
+  const reduce = useReducedMotion();
   const router = useRouter();
   const { data: user, isLoading: userLoading } = useUser();
   const [status, setStatus] = useState<TaskStatus | "">("");
@@ -33,6 +35,11 @@ export default function AdminPage() {
 
   return (
     <AppShell>
+      <motion.div
+        initial={reduce ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+      >
       <div className="flex items-end justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -84,8 +91,18 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-900">
-              {data?.items.map((t) => (
-                <tr key={t.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900">
+              {data?.items.map((t, i) => (
+                <motion.tr
+                  key={t.id}
+                  initial={reduce ? false : { opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.2,
+                    delay: reduce ? 0 : Math.min(i * 0.02, 0.2),
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  className="hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                >
                   <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-50 max-w-[28ch] truncate">
                     {t.title}
                   </td>
@@ -98,7 +115,7 @@ export default function AdminPage() {
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <PriorityBadge priority={t.priority} />
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
@@ -125,6 +142,7 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      </motion.div>
     </AppShell>
   );
 }

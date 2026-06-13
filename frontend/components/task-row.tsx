@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Check, Circle, Trash, CalendarBlank } from "@phosphor-icons/react";
+import { motion, useReducedMotion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 import { PriorityBadge, StatusBadge } from "@/components/ui/badge";
@@ -16,7 +17,8 @@ function formatDue(d: string | null): string | null {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function TaskRow({ task }: { task: Task }) {
+export function TaskRow({ task, index = 0 }: { task: Task; index?: number }) {
+  const reduce = useReducedMotion();
   const toggle = useToggleComplete();
   const del = useDeleteTask();
   const done = task.status === "completed";
@@ -24,10 +26,22 @@ export function TaskRow({ task }: { task: Task }) {
   const overdue = !done && task.due_date && new Date(task.due_date) < new Date();
 
   return (
-    <div className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">
-      <button
+    <motion.div
+      layout
+      initial={reduce ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={reduce ? { opacity: 0 } : { opacity: 0, x: -16, height: 0, paddingTop: 0, paddingBottom: 0 }}
+      transition={{
+        duration: 0.24,
+        delay: reduce ? 0 : Math.min(index * 0.025, 0.25),
+        ease: [0.16, 1, 0.3, 1],
+      }}
+      className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors overflow-hidden"
+    >
+      <motion.button
         type="button"
         aria-label={done ? "Mark as pending" : "Mark as completed"}
+        whileTap={reduce ? undefined : { scale: 0.88 }}
         onClick={() =>
           toggle.mutate({ id: task.id, status: done ? "pending" : "completed" })
         }
@@ -39,20 +53,21 @@ export function TaskRow({ task }: { task: Task }) {
         )}
       >
         {done ? <Check size={12} weight="bold" /> : <Circle size={12} />}
-      </button>
+      </motion.button>
 
       <Link href={`/tasks/${task.id}/edit`} className="min-w-0 flex-1 group/link">
         <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
-          <p
+          <motion.p
+            layout="position"
             className={cn(
-              "text-sm font-medium truncate",
+              "text-sm font-medium truncate transition-colors",
               done
                 ? "line-through text-zinc-400 dark:text-zinc-500"
                 : "text-zinc-900 dark:text-zinc-50 group-hover/link:underline underline-offset-2",
             )}
           >
             {task.title}
-          </p>
+          </motion.p>
           {task.description && (
             <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{task.description}</p>
           )}
@@ -85,6 +100,6 @@ export function TaskRow({ task }: { task: Task }) {
       >
         <Trash size={16} aria-hidden />
       </Button>
-    </div>
+    </motion.div>
   );
 }

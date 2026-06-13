@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CaretLeft, CaretRight, Plus, ListChecks } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -21,11 +22,17 @@ const initial: TaskListParams = {
 };
 
 export default function Home() {
+  const reduce = useReducedMotion();
   const [params, setParams] = useState<TaskListParams>(initial);
   const { data, isLoading, isError, error, refetch, isFetching } = useTasks(params);
 
   return (
     <AppShell>
+      <motion.div
+        initial={reduce ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+      >
       <div className="flex items-end justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -56,16 +63,25 @@ export default function Home() {
             ))}
           </div>
         ) : isError ? (
-          <div className="p-10 text-center">
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-10 text-center"
+          >
             <p className="text-sm text-red-600 dark:text-red-400">
               Could not load tasks. {(error as { message?: string })?.message}
             </p>
             <Button variant="secondary" size="sm" className="mt-3" onClick={() => refetch()}>
               Retry
             </Button>
-          </div>
+          </motion.div>
         ) : data && data.items.length === 0 ? (
-          <div className="px-6 py-16 text-center">
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="px-6 py-16 text-center"
+          >
             <ListChecks size={32} className="mx-auto text-zinc-400" aria-hidden />
             <p className="mt-3 text-sm font-medium text-zinc-900 dark:text-zinc-50">
               {params.search || params.status ? "No tasks match these filters" : "No tasks yet"}
@@ -82,9 +98,13 @@ export default function Home() {
                 </Button>
               </Link>
             )}
-          </div>
+          </motion.div>
         ) : (
-          data?.items.map((t) => <TaskRow key={t.id} task={t} />)
+          <AnimatePresence initial mode="popLayout">
+            {data?.items.map((t, i) => (
+              <TaskRow key={t.id} task={t} index={i} />
+            ))}
+          </AnimatePresence>
         )}
       </section>
 
@@ -116,6 +136,7 @@ export default function Home() {
           </div>
         </div>
       )}
+      </motion.div>
     </AppShell>
   );
 }
