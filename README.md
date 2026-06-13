@@ -203,6 +203,7 @@ psql "<external-connection-string>" -c "UPDATE users SET role='admin' WHERE emai
 
 - Render's free Postgres expires after 90 days — back up or upgrade before then.
 - Free web services spin down after 15 minutes of inactivity. The first request after sleep takes 30-50 seconds while the container cold-starts. Both services sleep independently.
+- **Cold-start CORS errors are not real CORS bugs.** While the backend container is booting, Render's edge returns a 502 with no CORS headers; the browser surfaces that as a "CORS policy" error. The frontend mitigates this by pinging `/health` on mount (warming the backend before the user clicks anything) and retrying transient query failures with exponential backoff. The error can still appear on the very first visit after a long sleep; reload once and it goes away.
 
 ## Deployment — alternative platforms
 
